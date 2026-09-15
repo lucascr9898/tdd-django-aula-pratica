@@ -47,3 +47,35 @@ class NewVisitorTest(LiveServerTestCase):
         inputbox.send_keys(Keys.ENTER)
         self.wait_for_row_in_list_table('1: Comprar leite')
         self.wait_for_row_in_list_table('2: Usar leite para fazer bolo')
+
+    def test_multiple_users_can_start_lists_at_different_urls(self):
+        # Maria começa uma nova lista
+        self.browser.get(self.live_server_url)
+        inputbox = self.browser.find_element(By.ID, 'id_new_item')
+        inputbox.send_keys('Comprar leite')
+        inputbox.send_keys(Keys.ENTER)
+        self.wait_for_row_in_list_table('1: Comprar leite')
+
+        maria_list_url = self.browser.current_url
+        self.assertRegex(maria_list_url, '/lists/.+')
+
+        # Novo usuário, João, chega com um browser "limpo"
+        self.browser.quit()
+        self.browser = webdriver.Firefox()
+
+        self.browser.get(self.live_server_url)
+        page_text = self.browser.find_element(By.TAG_NAME, 'body').text
+        self.assertNotIn('Comprar leite', page_text)
+
+        inputbox = self.browser.find_element(By.ID, 'id_new_item')
+        inputbox.send_keys('Comprar pão')
+        inputbox.send_keys(Keys.ENTER)
+        self.wait_for_row_in_list_table('1: Comprar pão')
+
+        joao_list_url = self.browser.current_url
+        self.assertRegex(joao_list_url, '/lists/.+')
+        self.assertNotEqual(joao_list_url, maria_list_url)
+
+        page_text = self.browser.find_element(By.TAG_NAME, 'body').text
+        self.assertNotIn('Comprar leite', page_text)
+        self.assertIn('Comprar pão', page_text)
